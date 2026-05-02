@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model TCM {
+  id              String   @id @default(uuid())
+  name            String
+  initials        String
+  zone            String
+  conversionRate  Float
+  avgResponseMins Float
+  
+  // Relations
+  leads           Lead[]
+  tours           Tour[]
+  followUps       FollowUp[]
+  bookings        Booking[]
+}
+
+model Property {
+  id                   String   @id @default(uuid())
+  name                 String
+  area                 String
+  totalBeds            Int
+  vacantBeds           Int
+  daysSinceLastBooking Int
+  pricePerBed          Float
+
+  // Relations
+  tours                Tour[]
+  bookings             Booking[]
+}
+
+model Lead {
+  id                String   @id @default(uuid())
+  name              String
+  phone             String
+  source            String
+  budget            Float
+  moveInDate        DateTime
+  preferredArea     String
+  
+  assignedTcmId     String
+  tcm               TCM      @relation(fields: [assignedTcmId], references: [id])
+  
+  stage             String
+  intent            String
+  confidence        Int
+  tags              String   // JSON stringified array of tags
+  nextFollowUpAt    DateTime?
+  responseSpeedMins Int
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  tours             Tour[]
+  followUps         FollowUp[]
+  activities        ActivityLog[]
+  bookings          Booking[]
+  sequences         ActiveSequence[]
+  handoffMessages   HandoffMessage[]
+}
+
+model Tour {
+  id                 String   @id @default(uuid())
+  
+  leadId             String
+  lead               Lead     @relation(fields: [leadId], references: [id])
+  
+  propertyId         String
+  property           Property @relation(fields: [propertyId], references: [id])
+  
+  tcmId              String
+  tcm                TCM      @relation(fields: [tcmId], references: [id])
+  
+  scheduledAt        DateTime
+  status             String
+  decision           String?
+  
+  // PostTour Update fields flattened
+  ptOutcome          String?
+  ptConfidence       Int      @default(0)
+  ptObjection        String?
+  ptObjectionNote    String   @default("")
+  ptExpectedDecisionAt DateTime?
+  ptNextFollowUpAt   DateTime?
+  ptFilledAt         DateTime?
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  followUps          FollowUp[]
+  bookings           Booking[]
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  ts         DateTime @default(now())
+  kind       String
+  actor      String
+  text       String
+  
+  leadId     String?
+  lead       Lead?    @relation(fields: [leadId], references: [id])
+  
+  tourId     String?
+  propertyId String?
+}
+
+model FollowUp {
+  id         String   @id @default(uuid())
+  
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id])
+  
+  tourId     String?
+  tour       Tour?    @relation(fields: [tourId], references: [id])
+  
+  tcmId      String
+  tcm        TCM      @relation(fields: [tcmId], references: [id])
+  
+  dueAt      DateTime
+  priority   String
+  reason     String
+  done       Boolean  @default(false)
+}
+
+model HandoffMessage {
+  id         String   @id @default(uuid())
+  ts         DateTime @default(now())
+  
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id])
+  
+  fromRole   String
+  fromId     String
+  toRole     String
+  text       String
+  priority   String
+  read       Boolean  @default(false)
+}
+
+model ActiveSequence {
+  id            String   @id @default(uuid())
+  
+  leadId        String
+  lead          Lead     @relation(fields: [leadId], references: [id])
+  
+  kind          String
+  startedAt     DateTime @default(now())
+  currentStep   Int      @default(0)
+  paused        Boolean  @default(false)
+  stoppedReason String?
+}
+
+model Booking {
+  id         String   @id @default(uuid())
+  ts         DateTime @default(now())
+  amount     Float
+  
+  leadId     String
+  lead       Lead     @relation(fields: [leadId], references: [id])
+  
+  tourId     String
+  tour       Tour     @relation(fields: [tourId], references: [id])
+  
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  
+  tcmId      String
+  tcm        TCM      @relation(fields: [tcmId], references: [id])
+}

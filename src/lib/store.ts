@@ -63,6 +63,7 @@ interface AppState {
   advanceSequenceStep: (leadId: string) => void;
 
   closeDeal: (input: { leadId: string; tourId: string; propertyId: string; tcmId: string; amount: number }) => void;
+  hydrate: (data: Partial<AppState>) => void;
 }
 
 export const useApp = create<AppState>((set, get) => ({
@@ -83,6 +84,8 @@ export const useApp = create<AppState>((set, get) => ({
   handoffs: HANDOFFS,
   sequences: SEQUENCES_INIT,
   bookings: [],
+
+  hydrate: (data) => set((state) => ({ ...state, ...data })),
 
   setLeadStage: (leadId, stage) => {
     set((s) => ({
